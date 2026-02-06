@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; text-align: center; }
+        .container { background-color: #1e1e1e; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); width: 600px; }
+        h1 { font-size: 2.5em; margin-bottom: 10px; color: #bb86fc; }
+        #countdown { font-size: 3em; font-weight: bold; margin: 20px 0; color: #03dac6; letter-spacing: 2px; }
+        h2 { font-size: 1.8em; border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 40px; color: #cf6679; }
+        ul { list-style-type: none; padding: 0; }
+        li { background-color: #2c2c2c; margin: 10px 0; padding: 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        li span:first-child { font-weight: bold; }
+        li span:last-child { color: #b0b0b0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {{ if .NextEvent.Name }}
+            <h1>{{ .NextEvent.Name }}</h1>
+            <div id="countdown" data-date="{{ .NextEvent.Date }}"></div>
+        {{ else }}
+            <h1>No following events.</h1>
+        {{ end }}
+
+        {{ if .FollowingEvents }}
+            <h2>Following events</h2>
+            <ul>
+                {{ range .FollowingEvents }}
+                    <li>
+                        <span>{{ .Name }}</span>
+                        <span>{{ .Date.Format "2006-01-02 15:04" }}</span>
+                    </li>
+                {{ end }}
+            </ul>
+        {{ end }}
+    </div>
+
+    <script>
+        const countdownElement = document.getElementById('countdown');
+        if (countdownElement) {
+            const targetDate = new Date(countdownElement.dataset.date).getTime();
+
+            const interval = setInterval(function() {
+                const now = new Date().getTime();
+                const distance = targetDate - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    countdownElement.innerHTML = "The event has started!";
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                countdownElement.innerHTML = `${days}n ${hours}ó ${minutes}p ${seconds}m`;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
