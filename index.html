@@ -75,9 +75,9 @@
 
 <body>
     <div class="container">
-        {{ if .NextEvent.Name }}
+        {{ if .NextEvent }}
         <h1>{{ .NextEvent.Name }}</h1>
-        <div id="countdown" data-date="{{ .NextEvent.Date }}"></div>
+        <div id="countdown" data-date="{{ .NextEvent.DateISO }}"></div>
         {{ else }}
         <h1>No following events.</h1>
         {{ end }}
@@ -88,7 +88,7 @@
             {{ range .FollowingEvents }}
             <li>
                 <span>{{ .Name }}</span>
-                <span>{{ .Date.Format "2006-01-02 15:04" }}</span>
+                <span>{{ .DateText }}</span>
             </li>
             {{ end }}
         </ul>
@@ -101,7 +101,7 @@
             const targetDate = new Date(countdownElement.dataset.date).getTime();
 
             const interval = setInterval(function () {
-                const now = new Date().getTime();
+                const now = Date.now();
                 const distance = targetDate - now;
 
                 if (distance < 0) {

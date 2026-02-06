@@ -12,24 +12,26 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Event represents a single event with ixwts name and date.
 type Event struct {
 	Name string    `yaml:"name"`
 	Date time.Time `yaml:"date"`
 }
 
-// EventData holds all events read from the YAML file.
 type EventData struct {
 	Events []Event `yaml:"events"`
 }
 
-// PageData is the data structure passed to the HTML template.
-type PageData struct {
-	NextEvent       Event
-	FollowingEvents []Event
+type EventView struct {
+	Name     string
+	DateISO  string
+	DateText string
 }
 
-// loadEvents reads and parses the events.yaml file.
+type PageData struct {
+	NextEvent       *EventView
+	FollowingEvents []EventView
+}
+
 func loadEvents(path string) (*EventData, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -37,17 +39,22 @@ func loadEvents(path string) (*EventData, error) {
 	}
 
 	var eventData EventData
-	err = yaml.Unmarshal(data, &eventData)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal yaml from %s: %w", path, err)
+	if err := yaml.Unmarshal(data, &eventData); err != nil {
+		return nil, fmt.Errorf("could not unmarshal yaml: %w", err)
 	}
 
 	return &eventData, nil
 }
 
-// countdownHandler handles the main page logic.
+func toView(e Event) EventView {
+	return EventView{
+		Name:     e.Name,
+		DateISO:  e.Date.Format(time.RFC3339),
+		DateText: e.Date.Format("2006-01-02 15:04"),
+	}
+}
+
 func countdownHandler(w http.ResponseWriter, r *http.Request) {
-	// Load events from YAML file.
 	eventData, err := loadEvents("events.yaml")
 	if err != nil {
 		log.Printf("Error loading events: %v", err)
@@ -55,7 +62,6 @@ func countdownHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Filter for future events.
 	now := time.Now()
 	var futureEvents []Event
 	for _, event := range eventData.Events {
@@ -64,21 +70,21 @@ func countdownHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Sort future events by date.
 	sort.Slice(futureEvents, func(i, j int) bool {
 		return futureEvents[i].Date.Before(futureEvents[j].Date)
 	})
 
-	// Prepare data for the template.
-	pageData := PageData{}
+	var pageData PageData
+
 	if len(futureEvents) > 0 {
-		pageData.NextEvent = futureEvents[0]
-	}
-	if len(futureEvents) > 1 {
-		pageData.FollowingEvents = futureEvents[1:]
+		ev := toView(futureEvents[0])
+		pageData.NextEvent = &ev
 	}
 
-	// Parse and execute the template.
+	for _, e := range futureEvents[1:] {
+		pageData.FollowingEvents = append(pageData.FollowingEvents, toView(e))
+	}
+
 	tmpl, err := template.ParseFiles("index.html")
 	if err != nil {
 		log.Printf("Error parsing template: %v", err)
@@ -86,8 +92,7 @@ func countdownHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = tmpl.Execute(w, pageData)
-	if err != nil {
+	if err := tmpl.Execute(w, pageData); err != nil {
 		log.Printf("Error executing template: %v", err)
 		http.Error(w, "Could not render page", http.StatusInternalServerError)
 		return
